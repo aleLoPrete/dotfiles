@@ -129,4 +129,7 @@ alias py='python3.9'
 #alis for pip3
 alias pip='pip3'
 
-alias wezterm="~/bin/wezterm"
+#automated setup script aliases 
+alias coding='./codingprojects/autoscript/code.sh'
+alias poli='./codingprojects/autoscript/poli.sh'
+alias prod='./codingprojects/autoscript/prod.sh'

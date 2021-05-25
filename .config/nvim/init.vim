@@ -28,7 +28,6 @@ filetype plugin indent on
 set wrap
 set rnu " set relative numbered lines
 set number " show current line number
-set nowrap
 set noswapfile
 set nobackup
 set undodir=~/.vim/undodir
@@ -93,10 +92,13 @@ Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'https://github.com/cocopon/iceberg.vim'
 Plug 'vim-pandoc/vim-pandoc'
 Plug 'vim-pandoc/vim-pandoc-syntax' 
+Plug 'altercation/vim-colors-solarized'
+Plug 'freeo/vim-kalisi'
 call plug#end()
 
 
 " setting colorscheme
+"
 colorscheme gruvbox
 set background=dark
 
@@ -137,3 +139,6 @@ noremap <C-l> <C-W>l
 
 " enabling normal mode in terminal split windows
 tnoremap <Esc> <C-\><C-n>
+
+"removing binding to enable zen mode shortcut in vscode
+map <C-k> <Nop>
