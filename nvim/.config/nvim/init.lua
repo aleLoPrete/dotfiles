@@ -14,8 +14,9 @@ vim.opt.rtp:prepend(lazypath)
 
 -- 2. PLUGINS
 require("lazy").setup({
-  -- Theme
+  -- Themes
   { 'catppuccin/nvim', name = "catppuccin", priority = 1000 },
+  { 'maxmx03/solarized.nvim', priority = 1000 },
 
   -- File Tree
   'nvim-tree/nvim-tree.lua',
@@ -221,6 +222,7 @@ require("lazy").setup({
 })
 
 -- 3. CONFIGURATION
+require("catppuccin").setup({ flavour = "mocha" })
 vim.cmd("colorscheme catppuccin")
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -283,6 +285,22 @@ vim.keymap.set('n', '<S-l>', ':BufferLineCycleNext<CR>', { desc = 'Next Buffer',
 vim.keymap.set('n', '<leader>x', ':Bdelete<CR>', { desc = 'Close Buffer', silent = true })
 -- Space + X to close all other buffers
 vim.keymap.set('n', '<leader>X', ':BufferLineCloseOthers<CR>', { desc = 'Close Other Buffers', silent = true })
+
+-- > THEME TOGGLE (Space + t)
+local theme_dark = true
+local function toggle_theme()
+  theme_dark = not theme_dark
+  if theme_dark then
+    vim.o.background = "dark"
+    require("catppuccin").setup({ flavour = "mocha" })
+    vim.cmd("colorscheme catppuccin")
+  else
+    vim.o.background = "light"
+    require("solarized").setup({ theme = "neo" })
+    vim.cmd("colorscheme solarized")
+  end
+end
+vim.keymap.set('n', '<leader>tt', toggle_theme, { desc = 'Toggle Dark/Light Theme' })
 
 -- > CENTERED SCROLLING
 -- Note: Neoscroll plugin handles smooth scrolling for <C-d> and <C-u>
