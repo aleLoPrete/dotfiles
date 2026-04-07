@@ -78,6 +78,19 @@ require("lazy").setup({
     end
   },
 
+  -- Zen Mode (centered writing)
+  {
+    "folke/zen-mode.nvim",
+    opts = {
+      window = {
+        width = 120,
+      },
+    },
+    keys = {
+      { "<leader>z", "<cmd>ZenMode<cr>", desc = "Toggle Zen Mode" },
+    },
+  },
+
   -- Markdown Rendering
   {
     'MeanderingProgrammer/render-markdown.nvim',
