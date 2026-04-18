@@ -124,6 +124,51 @@ install_homebrew() {
   log_ok "Homebrew installed"
 }
 
+# ─── zsh ─────────────────────────────────────────────────────────────────────
+install_zsh() {
+  log_section "zsh"
+  if has zsh; then log_skip "zsh already installed"; return; fi
+  if [[ "$OS" == "macos" ]]; then brew_ensure zsh
+  else apt_ensure zsh; fi
+}
+
+install_omz() {
+  log_section "oh-my-zsh"
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    log_skip "oh-my-zsh already installed"
+    return
+  fi
+  if ! has zsh; then
+    log_warn "zsh not installed; skipping oh-my-zsh"
+    return
+  fi
+  log_info "Installing oh-my-zsh (unattended)..."
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  log_ok "oh-my-zsh installed"
+}
+
+set_default_shell() {
+  log_section "Default shell"
+  local zsh_path
+  zsh_path=$(command -v zsh || true)
+  if [[ -z "$zsh_path" ]]; then
+    log_warn "zsh not found; skipping default shell change"
+    return
+  fi
+  local current
+  current=$(getent passwd "$USER" 2>/dev/null | cut -d: -f7)
+  if [[ "$current" == "$zsh_path" ]]; then
+    log_skip "zsh is already the default shell"
+    return
+  fi
+  log_info "Setting zsh as default shell for $USER..."
+  if sudo chsh -s "$zsh_path" "$USER"; then
+    log_ok "Default shell set to zsh (effective on next login)"
+  else
+    log_warn "Could not set default shell. Run manually: chsh -s $zsh_path"
+  fi
+}
+
 # ─── Stow ────────────────────────────────────────────────────────────────────
 install_stow() {
   log_section "stow"
@@ -449,6 +494,7 @@ confirm_sources() {
   if [[ "$OS" == "macos" ]]; then
   printf '  %-10s  %b  %s\n' "[homebrew]"  "$_no"   "raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
   fi
+  printf '  %-10s  %b  %s\n' "[omz]"       "$_no"   "raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
   printf '  %-10s  %b  %s\n' "[zoxide]"    "$_no"   "raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh"
   printf '  %-10s  %b  %s\n' "[neovim]"    "$_no"   "github.com/neovim/neovim/releases/latest"
   printf '  %-10s  %b  %s\n' "[lazygit]"   "$_no"   "github.com/jesseduffield/lazygit/releases/latest"
@@ -484,6 +530,8 @@ main() {
     apt_ensure curl
   fi
 
+  install_zsh
+  install_omz
   install_stow
   install_tmux
   install_zoxide
@@ -498,6 +546,7 @@ main() {
   fi
   stow_dotfiles
   configure_shell_init
+  set_default_shell
 
   printf '\n\033[1;32m✓ Bootstrap complete.\033[0m\n'
   printf '  Restart your shell or: source ~/.zshrc / source ~/.bashrc\n\n'
