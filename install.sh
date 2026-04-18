@@ -56,6 +56,7 @@ verify_sha256() {
 OS=""
 ARCH=""
 IS_SSH=false
+IS_HEADLESS=false
 
 detect_env() {
   log_section "Detecting environment"
@@ -76,7 +77,7 @@ detect_env() {
     IS_SSH=true
   fi
 
-  log_info "OS=$OS  ARCH=$ARCH  IS_SSH=$IS_SSH"
+  log_info "OS=$OS  ARCH=$ARCH  IS_SSH=$IS_SSH  IS_HEADLESS=$IS_HEADLESS"
 }
 
 # ─── Package helpers ─────────────────────────────────────────────────────────
@@ -166,21 +167,51 @@ install_neovim() {
     return
   fi
 
-  local tmp asset_name sha_name base_url
+  local tmp release_json asset_name sha_name dl_url sha_url
   tmp=$(_mktemp_dir)
 
-  if [[ "$ARCH" == "arm64" ]]; then
-    asset_name="nvim-linux-arm64.tar.gz"
-    sha_name="nvim-linux-arm64.tar.gz.sha256sum"
-  else
-    asset_name="nvim-linux-x86_64.tar.gz"
-    sha_name="nvim-linux-x86_64.tar.gz.sha256sum"
+  log_info "Fetching neovim release info..."
+  release_json=$(curl -fsSL https://api.github.com/repos/neovim/neovim/releases/latest)
+
+  # Verify API response is valid (rate limit returns {"message":"..."} with no assets)
+  if ! printf '%s' "$release_json" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'assets' in d" 2>/dev/null; then
+    log_error "GitHub API error (possibly rate-limited): $(printf '%s' "$release_json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message','unknown error'))" 2>/dev/null || echo 'invalid response')"
   fi
 
-  base_url="https://github.com/neovim/neovim/releases/latest/download"
+  if [[ "$ARCH" == "arm64" ]]; then
+    dl_url=$(printf '%s' "$release_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(next(a['browser_download_url'] for a in d['assets']
+  if a['name'].endswith('.tar.gz') and 'linux' in a['name'] and 'arm64' in a['name']))
+")
+    sha_url=$(printf '%s' "$release_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(next(a['browser_download_url'] for a in d['assets']
+  if a['name'].endswith('.sha256sum') and 'linux' in a['name'] and 'arm64' in a['name']))
+")
+  else
+    dl_url=$(printf '%s' "$release_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(next(a['browser_download_url'] for a in d['assets']
+  if a['name'].endswith('.tar.gz') and 'linux' in a['name'] and 'arm' not in a['name']))
+")
+    sha_url=$(printf '%s' "$release_json" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(next(a['browser_download_url'] for a in d['assets']
+  if a['name'].endswith('.sha256sum') and 'linux' in a['name'] and 'arm' not in a['name']))
+")
+  fi
+
+  asset_name=$(basename "$dl_url")
+  sha_name=$(basename "$sha_url")
+
   log_info "Downloading $asset_name..."
-  curl -fsSL "$base_url/$asset_name" -o "$tmp/$asset_name"
-  curl -fsSL "$base_url/$sha_name"   -o "$tmp/$sha_name"
+  curl -fsSL "$dl_url"  -o "$tmp/$asset_name"
+  curl -fsSL "$sha_url" -o "$tmp/$sha_name"
 
   local expected_hash
   expected_hash=$(awk '{print $1}' "$tmp/$sha_name")
@@ -335,6 +366,23 @@ install_pnpm() {
   log_ok "pnpm installed via corepack"
 }
 
+# ─── ghostty terminfo ────────────────────────────────────────────────────────
+install_ghostty_terminfo() {
+  log_section "ghostty terminfo"
+  if infocmp xterm-ghostty &>/dev/null; then
+    log_skip "xterm-ghostty terminfo already installed"
+    return
+  fi
+  apt_ensure ncurses-bin
+  log_info "Installing ghostty terminfo..."
+  local tmp
+  tmp=$(_mktemp_dir)
+  curl -fsSL https://raw.githubusercontent.com/ghostty-org/ghostty/main/src/terminfo/ghostty.terminfo \
+    -o "$tmp/ghostty.terminfo"
+  tic -x "$tmp/ghostty.terminfo"
+  log_ok "ghostty terminfo installed"
+}
+
 # ─── TPM ─────────────────────────────────────────────────────────────────────
 install_tpm() {
   log_section "TPM (Tmux Plugin Manager)"
@@ -353,10 +401,10 @@ stow_dotfiles() {
   log_section "Stow dotfiles"
 
   local pkgs=("nvim" "tmux")
-  if [[ "$IS_SSH" == "false" ]]; then
+  if [[ "$IS_SSH" == "false" && "$IS_HEADLESS" == "false" ]]; then
     pkgs+=("ghostty")
   else
-    log_skip "ghostty (SSH session)"
+    log_skip "ghostty (SSH/VM session)"
   fi
 
   pushd "$DOTFILES_DIR" >/dev/null
@@ -468,6 +516,7 @@ main() {
   else
     log_section "apt update"
     sudo apt-get update -qq
+    apt_ensure curl
   fi
 
   install_stow
@@ -479,6 +528,9 @@ main() {
   install_node
   install_pnpm
   install_tpm
+  if [[ "$IS_HEADLESS" == "true" ]]; then
+    install_ghostty_terminfo
+  fi
   stow_dotfiles
   configure_shell_init
 
@@ -489,6 +541,7 @@ main() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -y|--yes) SKIP_CONFIRM=true ;;
+    --vm)     IS_HEADLESS=true ;;
     *) log_error "Unknown argument: $1" ;;
   esac
   shift
