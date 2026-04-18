@@ -223,6 +223,8 @@ install_fnm() {
     return
   fi
 
+  apt_ensure unzip
+
   local tmp asset_name
   tmp=$(_mktemp_dir)
 
