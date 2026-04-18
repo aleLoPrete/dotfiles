@@ -376,23 +376,6 @@ install_pnpm() {
   log_ok "pnpm installed via corepack"
 }
 
-# ─── ghostty terminfo ────────────────────────────────────────────────────────
-install_ghostty_terminfo() {
-  log_section "ghostty terminfo"
-  if infocmp xterm-ghostty &>/dev/null; then
-    log_skip "xterm-ghostty terminfo already installed"
-    return
-  fi
-  apt_ensure ncurses-bin
-  log_info "Installing ghostty terminfo..."
-  local tmp
-  tmp=$(_mktemp_dir)
-  curl -fsSL https://raw.githubusercontent.com/ghostty-org/ghostty/main/src/terminfo/ghostty.terminfo \
-    -o "$tmp/ghostty.terminfo"
-  tic -x "$tmp/ghostty.terminfo"
-  log_ok "ghostty terminfo installed"
-}
-
 # ─── TPM ─────────────────────────────────────────────────────────────────────
 install_tpm() {
   log_section "TPM (Tmux Plugin Manager)"
@@ -541,15 +524,19 @@ main() {
   install_node
   install_pnpm
   install_tpm
-  if [[ "$IS_HEADLESS" == "true" || "$IS_SSH" == "true" ]]; then
-    install_ghostty_terminfo
-  fi
   stow_dotfiles
   configure_shell_init
   set_default_shell
 
   printf '\n\033[1;32m✓ Bootstrap complete.\033[0m\n'
-  printf '  Restart your shell or: source ~/.zshrc / source ~/.bashrc\n\n'
+  printf '  Restart your shell or: source ~/.zshrc / source ~/.bashrc\n'
+
+  if [[ "$IS_SSH" == "true" || "$IS_HEADLESS" == "true" ]]; then
+    printf '\n\033[1mIf you see "xterm-ghostty: unknown terminal type" errors:\033[0m\n'
+    printf '  Run this from your LOCAL ghostty terminal (not here):\n'
+    printf '    \033[36minfocmp -x xterm-ghostty | ssh <user>@<host> -- tic -x -\033[0m\n'
+  fi
+  printf '\n'
 }
 
 while [[ $# -gt 0 ]]; do
