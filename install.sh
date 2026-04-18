@@ -167,25 +167,18 @@ install_neovim() {
     return
   fi
 
-  local tmp asset_name sha_name base_url
+  local tmp asset_name base_url
   tmp=$(_mktemp_dir)
 
   if [[ "$ARCH" == "arm64" ]]; then
     asset_name="nvim-linux-arm64.tar.gz"
-    sha_name="nvim-linux-arm64.tar.gz.sha256sum"
   else
     asset_name="nvim-linux-x86_64.tar.gz"
-    sha_name="nvim-linux-x86_64.tar.gz.sha256sum"
   fi
 
   base_url="https://github.com/neovim/neovim/releases/latest/download"
   log_info "Downloading $asset_name..."
   curl -fsSL "$base_url/$asset_name" -o "$tmp/$asset_name"
-  curl -fsSL "$base_url/$sha_name"   -o "$tmp/$sha_name"
-
-  local expected_hash
-  expected_hash=$(awk '{print $1}' "$tmp/$sha_name")
-  verify_sha256 "$tmp/$asset_name" "$expected_hash" "$asset_name"
 
   log_info "Installing Neovim to /usr/local..."
   mkdir "$tmp/nvim"
@@ -455,7 +448,7 @@ confirm_sources() {
   printf '  %-10s  %b  %s\n' "[homebrew]"  "$_no"   "raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
   fi
   printf '  %-10s  %b  %s\n' "[zoxide]"    "$_no"   "raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh"
-  printf '  %-10s  %b  %s\n' "[neovim]"    "$_ok"   "github.com/neovim/neovim/releases/latest"
+  printf '  %-10s  %b  %s\n' "[neovim]"    "$_no"   "github.com/neovim/neovim/releases/latest"
   printf '  %-10s  %b  %s\n' "[lazygit]"   "$_no"   "github.com/jesseduffield/lazygit/releases/latest"
   printf '  %-10s  %b  %s\n' "[fnm]"       "$_no"   "github.com/Schniz/fnm/releases/latest"
   printf '  %-10s  %b  %s\n' "[node]"      "$_ok"   "nodejs.org/dist/ (LTS)"
