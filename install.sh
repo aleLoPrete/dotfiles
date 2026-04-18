@@ -167,51 +167,21 @@ install_neovim() {
     return
   fi
 
-  local tmp release_json asset_name sha_name dl_url sha_url
+  local tmp asset_name sha_name base_url
   tmp=$(_mktemp_dir)
 
-  log_info "Fetching neovim release info..."
-  release_json=$(curl -fsSL https://api.github.com/repos/neovim/neovim/releases/latest)
-
-  # Verify API response is valid (rate limit returns {"message":"..."} with no assets)
-  if ! printf '%s' "$release_json" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'assets' in d" 2>/dev/null; then
-    log_error "GitHub API error (possibly rate-limited): $(printf '%s' "$release_json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message','unknown error'))" 2>/dev/null || echo 'invalid response')"
-  fi
-
   if [[ "$ARCH" == "arm64" ]]; then
-    dl_url=$(printf '%s' "$release_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(next(a['browser_download_url'] for a in d['assets']
-  if a['name'].endswith('.tar.gz') and 'linux' in a['name'] and 'arm64' in a['name']))
-")
-    sha_url=$(printf '%s' "$release_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(next(a['browser_download_url'] for a in d['assets']
-  if a['name'].endswith('.sha256sum') and 'linux' in a['name'] and 'arm64' in a['name']))
-")
+    asset_name="nvim-linux-arm64.tar.gz"
+    sha_name="nvim-linux-arm64.tar.gz.sha256sum"
   else
-    dl_url=$(printf '%s' "$release_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(next(a['browser_download_url'] for a in d['assets']
-  if a['name'].endswith('.tar.gz') and 'linux' in a['name'] and 'arm' not in a['name']))
-")
-    sha_url=$(printf '%s' "$release_json" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(next(a['browser_download_url'] for a in d['assets']
-  if a['name'].endswith('.sha256sum') and 'linux' in a['name'] and 'arm' not in a['name']))
-")
+    asset_name="nvim-linux-x86_64.tar.gz"
+    sha_name="nvim-linux-x86_64.tar.gz.sha256sum"
   fi
 
-  asset_name=$(basename "$dl_url")
-  sha_name=$(basename "$sha_url")
-
+  base_url="https://github.com/neovim/neovim/releases/latest/download"
   log_info "Downloading $asset_name..."
-  curl -fsSL "$dl_url"  -o "$tmp/$asset_name"
-  curl -fsSL "$sha_url" -o "$tmp/$sha_name"
+  curl -fsSL "$base_url/$asset_name" -o "$tmp/$asset_name"
+  curl -fsSL "$base_url/$sha_name"   -o "$tmp/$sha_name"
 
   local expected_hash
   expected_hash=$(awk '{print $1}' "$tmp/$sha_name")
