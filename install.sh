@@ -541,7 +541,7 @@ main() {
   install_node
   install_pnpm
   install_tpm
-  if [[ "$IS_HEADLESS" == "true" ]]; then
+  if [[ "$IS_HEADLESS" == "true" || "$IS_SSH" == "true" ]]; then
     install_ghostty_terminfo
   fi
   stow_dotfiles
