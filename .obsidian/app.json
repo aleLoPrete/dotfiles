@@ -1,0 +1,12 @@
+{
+  "vimMode": true,
+  "propertiesInDocument": "visible",
+  "showInlineTitle": false,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "notes",
+  "attachmentFolderPath": "media",
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": true,
+  "readableLineLength": true,
+  "strictLineBreaks": true
+}
